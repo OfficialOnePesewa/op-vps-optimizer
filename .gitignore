@@ -1,0 +1,57 @@
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.bak
+*~
+
+# Backups
+backups/
+*.backup
+*.tar
+*.tar.gz
+*.tgz
+
+# Build files
+build/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+*.o
+*.a
+
+# Downloaded source code
+vendor/
+third_party/
+
+# Environment and private configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+
+# Local VPS configuration
+local-config/
+server-config/
+private/
+
+# Editor and operating system files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Package files
+__pycache__/
+*.pyc
+
+# Keep project scripts and configuration tracked
+!scripts/
+!config/
