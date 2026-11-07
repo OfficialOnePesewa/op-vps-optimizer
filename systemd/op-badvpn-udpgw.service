@@ -1,0 +1,21 @@
+[Unit]
+Description=OP BadVPN UDP Gateway
+Documentation=https://github.com/ambrop72/badvpn
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+EnvironmentFile=-/etc/op-badvpn/udpgw.env
+ExecStart=/usr/local/bin/badvpn-udpgw --listen-addr ${LISTEN_ADDR} --max-clients ${MAX_CLIENTS}
+Restart=on-failure
+RestartSec=3
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target
