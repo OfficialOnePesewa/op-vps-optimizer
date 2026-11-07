@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+SCRIPT_DIR="/opt/op-vps-optimizer/scripts"
+
+usage() {
+    cat <<'EOF'
+OP VPS Optimizer
+
+Usage:
+  op-vps-optimizer [command]
+
+Commands:
+  apply           Apply network optimization
+  status          Display network settings and support
+  rollback        Remove optimizer settings and restore backup
+  install-badvpn  Install optional BadVPN-UDPGW
+  help            Display this help message
+EOF
+}
+
+COMMAND="${1:-apply}"
+
+case "$COMMAND" in
+    apply)
+        exec "$SCRIPT_DIR/optimize.sh"
+        ;;
+    status)
+        exec "$SCRIPT_DIR/status.sh"
+        ;;
+    rollback)
+        exec "$SCRIPT_DIR/rollback.sh"
+        ;;
+    install-badvpn)
+        exec "$SCRIPT_DIR/install-badvpn.sh"
+        ;;
+    help|-h|--help)
+        usage
+        ;;
+    *)
+        echo "Unknown command: $COMMAND"
+        usage
+        exit 2
+        ;;
+esac
