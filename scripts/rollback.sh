@@ -30,6 +30,17 @@ fi
 sysctl -w net.ipv4.tcp_autocorking=1 >/dev/null 2>&1 || true
 echo "OP SmartFlow removed."
 
+# 0b) Remove stability changes (UDP timeouts, keepalives, QUIC block).
+if [[ -x "$SCRIPT_DIR/stability.sh" ]]; then
+    "$SCRIPT_DIR/stability.sh" off >/dev/null 2>&1 || true
+fi
+echo "Stability settings removed."
+
+# 0c) Remove doctor UDP buffer boost.
+if [[ -x "$SCRIPT_DIR/doctor.sh" ]]; then
+    "$SCRIPT_DIR/doctor.sh" unfix >/dev/null 2>&1 || true
+fi
+
 # 1) Restore original live kernel values, key by key.
 if [[ -f "$ORIG" ]]; then
     RESTORED=0
