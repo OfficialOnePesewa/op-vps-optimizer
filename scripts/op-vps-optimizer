@@ -19,6 +19,17 @@ Commands:
   profile hplus      Force the H+ / lossy-link profile
   profile status     Show SmartFlow mode and retransmit rate
   profile off        Disable SmartFlow
+  stability apply    Longer UDP timeouts and keepalives
+  stability quic-block
+                     Block QUIC (UDP 443) so apps use TCP (optional)
+  stability quic-allow
+                     Allow QUIC again
+  stability status   Show stability state
+  stability off      Remove stability changes and restore values
+  doctor             Find what limits streaming speed
+                     (run while a phone is streaming)
+  doctor fix         Raise UDP tunnel buffers
+  doctor unfix       Restore UDP buffer defaults
   rollback           Restore original kernel settings and remove
                      the optimizer service and firewall clamp
   rollback --full    Same as rollback, and also remove the
@@ -47,6 +58,8 @@ case "$COMMAND" in
     apply)          run_script optimize.sh "$@" ;;
     status)         run_script status.sh "$@" ;;
     profile)        run_script stream-profile.sh "$@" ;;
+    stability)      run_script stability.sh "$@" ;;
+    doctor)         run_script doctor.sh "$@" ;;
     rollback)       run_script rollback.sh "$@" ;;
     install-badvpn) run_script install-badvpn.sh "$@" ;;
     help|-h|--help) usage ;;
