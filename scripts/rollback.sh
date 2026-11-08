@@ -7,6 +7,7 @@ ORIG="$BACKUP_DIR/sysctl-original.conf"
 BOOST_BIN="/usr/local/sbin/op-stream-boost"
 BOOST_SERVICE="/etc/systemd/system/op-stream-boost.service"
 MODULES_CONF="/etc/modules-load.d/op-vps-optimizer.conf"
+SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 
 FULL=0
 [[ "${1:-}" == "--full" ]] && FULL=1
@@ -17,6 +18,17 @@ if [[ "${EUID}" -ne 0 ]]; then
 fi
 
 echo "Rolling back OP VPS Optimizer..."
+
+# 0) Turn off OP SmartFlow first, so restored values below take priority.
+if [[ -x "$SCRIPT_DIR/stream-profile.sh" ]]; then
+    "$SCRIPT_DIR/stream-profile.sh" off >/dev/null 2>&1 || true
+else
+    systemctl disable --now op-stream-adapt.service >/dev/null 2>&1 || true
+    rm -f /etc/systemd/system/op-stream-adapt.service \
+          /etc/op-vps-optimizer/profile.mode /run/op-stream-profile.state
+fi
+sysctl -w net.ipv4.tcp_autocorking=1 >/dev/null 2>&1 || true
+echo "OP SmartFlow removed."
 
 # 1) Restore original live kernel values, key by key.
 if [[ -f "$ORIG" ]]; then
