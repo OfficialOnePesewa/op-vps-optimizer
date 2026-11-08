@@ -1,5 +1,5 @@
 [Unit]
-Description=OP BadVPN UDP Gateway
+Description=OP BadVPN UDP Gateway (legacy single-port unit)
 Documentation=https://github.com/ambrop72/badvpn
 After=network-online.target
 Wants=network-online.target
@@ -7,10 +7,14 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=root
+Environment=LISTEN_ADDR=127.0.0.1:7300
+Environment=MAX_CLIENTS=1000
+Environment=MAX_CONN_PER_CLIENT=64
 EnvironmentFile=-/etc/op-badvpn/udpgw.env
-ExecStart=/usr/local/bin/badvpn-udpgw --listen-addr ${LISTEN_ADDR} --max-clients ${MAX_CLIENTS}
+ExecStart=/usr/local/bin/badvpn-udpgw --listen-addr ${LISTEN_ADDR} --max-clients ${MAX_CLIENTS} --max-connections-for-client ${MAX_CONN_PER_CLIENT} --loglevel warning
 Restart=on-failure
 RestartSec=3
+LimitNOFILE=65535
 
 NoNewPrivileges=true
 PrivateTmp=true
