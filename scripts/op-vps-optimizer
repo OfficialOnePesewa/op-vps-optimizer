@@ -5,40 +5,47 @@ SCRIPT_DIR="/opt/op-vps-optimizer/scripts"
 
 usage() {
     cat <<'EOF'
-OP VPS Optimizer
+OP VPS Optimizer - Streaming Edition
 
 Usage:
-  op-vps-optimizer [command]
+  op-vps-optimizer [command] [options]
 
 Commands:
-  apply           Apply network optimization
-  status          Display network settings and support
-  rollback        Remove optimizer settings and restore backup
-  install-badvpn  Install optional BadVPN-UDPGW
-  help            Display this help message
+  apply              Apply streaming network optimization
+  status             Show settings and streaming health check
+  rollback           Restore original kernel settings and remove
+                     the optimizer service and firewall clamp
+  rollback --full    Same as rollback, and also remove the
+                     OP BadVPN-UDPGW services
+  install-badvpn     Install or update BadVPN-UDPGW (ports 7100,
+                     7200, 7300 on 127.0.0.1)
+  help               Display this help message
 EOF
 }
 
+run_script() {
+    local script="$SCRIPT_DIR/$1"
+    shift
+    if [[ ! -x "$script" ]]; then
+        echo "Error: missing or not executable: $script"
+        echo "Re-run the installer one-liner to repair the installation."
+        exit 1
+    fi
+    exec "$script" "$@"
+}
+
 COMMAND="${1:-apply}"
+[[ $# -gt 0 ]] && shift
 
 case "$COMMAND" in
-    apply)
-        exec "$SCRIPT_DIR/optimize.sh"
-        ;;
-    status)
-        exec "$SCRIPT_DIR/status.sh"
-        ;;
-    rollback)
-        exec "$SCRIPT_DIR/rollback.sh"
-        ;;
-    install-badvpn)
-        exec "$SCRIPT_DIR/install-badvpn.sh"
-        ;;
-    help|-h|--help)
-        usage
-        ;;
+    apply)          run_script optimize.sh "$@" ;;
+    status)         run_script status.sh "$@" ;;
+    rollback)       run_script rollback.sh "$@" ;;
+    install-badvpn) run_script install-badvpn.sh "$@" ;;
+    help|-h|--help) usage ;;
     *)
         echo "Unknown command: $COMMAND"
+        echo
         usage
         exit 2
         ;;
