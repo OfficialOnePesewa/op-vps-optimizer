@@ -13,6 +13,12 @@ Usage:
 Commands:
   apply              Apply streaming network optimization
   status             Show settings and streaming health check
+  profile auto       OP SmartFlow: switch H+ / LTE profiles
+                     automatically (recommended)
+  profile lte        Force the LTE profile
+  profile hplus      Force the H+ / lossy-link profile
+  profile status     Show SmartFlow mode and retransmit rate
+  profile off        Disable SmartFlow
   rollback           Restore original kernel settings and remove
                      the optimizer service and firewall clamp
   rollback --full    Same as rollback, and also remove the
@@ -40,6 +46,7 @@ COMMAND="${1:-apply}"
 case "$COMMAND" in
     apply)          run_script optimize.sh "$@" ;;
     status)         run_script status.sh "$@" ;;
+    profile)        run_script stream-profile.sh "$@" ;;
     rollback)       run_script rollback.sh "$@" ;;
     install-badvpn) run_script install-badvpn.sh "$@" ;;
     help|-h|--help) usage ;;
