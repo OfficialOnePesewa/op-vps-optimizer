@@ -142,7 +142,9 @@ echo "Applying OP VPS Optimizer settings..."
 FAILED=0
 while IFS= read -r line; do
     [[ -z "$line" || "$line" == \#* ]] && continue
-    if ! sysctl -w "${line// /}" >/dev/null 2>&1; then
+    key="${line%%=*}"; key="${key//[[:space:]]/}"
+    val="${line#*=}";  val="${val#"${val%%[![:space:]]*}"}"
+    if ! sysctl -w "$key=$val" >/dev/null 2>&1; then
         echo "  skipped: $line"
         FAILED=$((FAILED+1))
     fi
@@ -198,6 +200,8 @@ echo "======================================"
 echo "Operating system: ${PRETTY_NAME:-Unknown}"
 echo "Congestion ctrl:  $(sysctl -n net.ipv4.tcp_congestion_control 2>/dev/null)"
 echo "Queue discipline: $(sysctl -n net.core.default_qdisc 2>/dev/null)"
+echo "TCP receive buf:  $(sysctl -n net.ipv4.tcp_rmem 2>/dev/null)"
+echo "TCP send buf:     $(sysctl -n net.ipv4.tcp_wmem 2>/dev/null)"
 echo "Skipped settings: $FAILED"
 echo "Configuration:    $CONFIG"
 echo
