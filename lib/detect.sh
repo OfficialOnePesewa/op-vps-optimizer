@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# 🧩 lib/detect.sh v2.2.0 - universal VPS provider + OS detection (ipapi.co)
+# 🧩 lib/detect.sh v2.2.1 - universal VPS provider + OS detection
 # Author: OfficialOnePesewa · Telegram: @OfficialOnePesewa
+# Detection never aborts the install: every step has a fallback.
 
 OP_AUTHOR="OfficialOnePesewa"
 OP_TELEGRAM="@OfficialOnePesewa"
-OP_VERSION="2.2.0"
+OP_VERSION="2.2.1"
 
-# ---------- OS ----------
 op_detect_os() {
   OS_PRETTY="unknown"; OS_ID="unknown"; OS_VERSION="unknown"
   if [ -r /etc/os-release ]; then
@@ -14,14 +14,12 @@ op_detect_os() {
     OS_ID="$(. /etc/os-release; echo "${ID:-unknown}")"
     OS_VERSION="$(. /etc/os-release; echo "${VERSION_ID:-unknown}")"
   fi
-  KERNEL="$(uname -r)"
-  ARCH="$(uname -m)"
+  KERNEL="$(uname -r 2>/dev/null || echo unknown)"
+  ARCH="$(uname -m 2>/dev/null || echo unknown)"
 }
 
-# ---------- Helpers ----------
-op_http() { curl -fsS --max-time 5 "$@" 2>/dev/null; }
+op_http() { curl -fsS --max-time 5 "$@" 2>/dev/null || true; }
 
-# Map any text (vendor, hostname, network owner) to a clean provider name
 op_name_from_text() {
   local t
   t="$(echo "$1" | tr '[:upper:]' '[:lower:]')"
@@ -64,79 +62,78 @@ op_name_from_text() {
     *psychz*)                      echo "Psychz" ;;
     *) ;;
   esac
+  return 0
 }
 
-# Public IP of this server
 op_public_ip() {
-  PUBLIC_IP="$(op_http https://api.ipify.org || op_http https://ifconfig.me || true)"
+  PUBLIC_IP="$(op_http https://api.ipify.org)"
+  [ -n "$PUBLIC_IP" ] || PUBLIC_IP="$(op_http https://ifconfig.me)"
   PUBLIC_IP="$(echo "$PUBLIC_IP" | tr -d '[:space:]')"
   case "$PUBLIC_IP" in
-    *[!0-9.]*|"") PUBLIC_IP="" ;;
+    *[!0-9.]*) PUBLIC_IP="" ;;
   esac
+  return 0
 }
 
-# ipapi.co: fetch once per run and cache the JSON
 op_ipapi_fetch() {
   [ -n "${IPAPI_JSON:-}" ] && return 0
   IPAPI_JSON="$(op_http "https://ipapi.co/${PUBLIC_IP:-json}/json/")"
   case "$IPAPI_JSON" in
-    *'"error"'*|"") IPAPI_JSON="" ;;
+    *'"error"'*) IPAPI_JSON="" ;;
   esac
+  return 0
 }
 
-# Read one field from the cached ipapi.co JSON
 op_ipapi_field() {
   echo "$IPAPI_JSON" | sed -n "s/.*\"$1\": *\"\([^\"]*\)\".*/\1/p" | head -n1
+  return 0
 }
 
-# ---------- Provider detection (layered) ----------
 op_metadata_provider() {
   if curl -fsS --max-time 2 -X PUT http://169.254.169.254/latest/api/token \
        -H 'X-aws-ec2-metadata-token-ttl-seconds: 60' >/dev/null 2>&1; then
-    echo "Amazon AWS"; return
+    echo "Amazon AWS"; return 0
   fi
   if curl -fsS --max-time 2 -H 'Metadata-Flavor: Google' \
        http://metadata.google.internal/computeMetadata/v1/instance/id >/dev/null 2>&1; then
-    echo "Google Cloud"; return
+    echo "Google Cloud"; return 0
   fi
   if curl -fsS --max-time 2 -H 'Metadata: true' \
        'http://169.254.169.254/metadata/instance?api-version=2021-02-01' >/dev/null 2>&1; then
-    echo "Microsoft Azure"; return
+    echo "Microsoft Azure"; return 0
   fi
   if curl -fsS --max-time 2 -H 'Authorization: Bearer Oracle' \
        http://169.254.169.254/opc/v2/instance >/dev/null 2>&1; then
-    echo "Oracle Cloud"; return
+    echo "Oracle Cloud"; return 0
   fi
   if curl -fsS --max-time 2 http://169.254.169.254/hetzner/v1/metadata >/dev/null 2>&1; then
-    echo "Hetzner"; return
+    echo "Hetzner"; return 0
   fi
   if curl -fsS --max-time 2 http://169.254.169.254/metadata/v1/id >/dev/null 2>&1; then
-    echo "DigitalOcean"; return
+    echo "DigitalOcean"; return 0
   fi
+  return 0
 }
 
 op_detect_provider() {
-  [ -n "${PROVIDER:-}" ] && return 0
-
   local dmi host raw name
   dmi="$(cat /sys/class/dmi/id/sys_vendor /sys/class/dmi/id/product_name \
         /sys/class/dmi/id/bios_vendor /sys/class/dmi/id/board_vendor \
-        /sys/class/dmi/id/chassis_vendor /sys/class/dmi/id/chassis_asset_tag 2>/dev/null | tr '\n' ' ')"
-  host="$(hostname -f 2>/dev/null || hostname 2>/dev/null)"
+        /sys/class/dmi/id/chassis_vendor 2>/dev/null | tr '\n' ' ')"
+  host="$(hostname -f 2>/dev/null || hostname 2>/dev/null || echo "")"
   raw="$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null | tr -d '\n')"
-  VIRT="$(systemd-detect-virt 2>/dev/null || echo unknown)"
+  VIRT="$(systemd-detect-virt 2>/dev/null || true)"
+  [ -n "$VIRT" ] || VIRT="unknown"
 
   PROVIDER=""; PROVIDER_SOURCE=""
-  ASN_ORG=""; ASN_NUMBER=""; IP_CITY=""; IP_COUNTRY=""
+  ASN_ORG=""; ASN_NUMBER=""; IP_CITY=""; IP_COUNTRY=""; IPAPI_JSON=""
   op_public_ip
 
-  # 1) Cloud metadata (fastest and most accurate on big clouds)
   name="$(op_metadata_provider)"
   if [ -n "$name" ]; then
     PROVIDER="$name"; PROVIDER_SOURCE="cloud metadata"
   fi
 
-  # 2) ipapi.co network owner (works for any provider on the internet)
   op_ipapi_fetch
   if [ -n "$IPAPI_JSON" ]; then
     ASN_ORG="$(op_ipapi_field org)"
@@ -150,7 +147,6 @@ op_detect_provider() {
     fi
   fi
 
-  # 3) Hardware and hostname (used if ipapi.co is unreachable)
   if [ -z "$PROVIDER" ]; then
     name="$(op_name_from_text "$dmi $host")"
     if [ -n "$name" ]; then
@@ -158,7 +154,6 @@ op_detect_provider() {
     fi
   fi
 
-  # 4) Raw vendor fallback
   if [ -z "$PROVIDER" ]; then
     if [ -n "$raw" ]; then
       PROVIDER="Unlisted provider (hardware vendor: $raw)"
@@ -167,16 +162,17 @@ op_detect_provider() {
     fi
     PROVIDER_SOURCE="fallback"
   fi
+  return 0
 }
 
 op_check_os() {
   case "$OS_ID" in
     debian|ubuntu) return 0 ;;
-    *) echo "⚠️  $OS_PRETTY is not Debian or Ubuntu. The script will continue, but it is only tested on those." ;;
+    *) echo "⚠️  $OS_PRETTY is not Debian or Ubuntu. Continuing, but only tested on those." ;;
   esac
+  return 0
 }
 
-# ---------- Display ----------
 op_banner() {
   echo "════════════════════════════════════════════════════"
   echo "  🚀 OP VPS OPTIMIZER  ·  Streaming Edition  v$OP_VERSION"
@@ -184,6 +180,7 @@ op_banner() {
   echo "  👤 Author: $OP_AUTHOR"
   echo "  ✈️  Telegram: $OP_TELEGRAM"
   echo "════════════════════════════════════════════════════"
+  return 0
 }
 
 op_show_system() {
@@ -193,8 +190,8 @@ op_show_system() {
   ip="$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src"){print $(i+1); exit}}')"
   echo "🖥️  VPS provider   : $PROVIDER"
   echo "🔎 Detected via   : $PROVIDER_SOURCE"
-  [ -n "$ASN_ORG" ]     && echo "🏢 Network owner  : $ASN_ORG ${ASN_NUMBER:+($ASN_NUMBER)}"
-  [ -n "$IP_COUNTRY" ]  && echo "📍 Location       : ${IP_CITY:+$IP_CITY, }$IP_COUNTRY"
+  [ -n "$ASN_ORG" ]    && echo "🏢 Network owner  : $ASN_ORG ${ASN_NUMBER:+($ASN_NUMBER)}"
+  [ -n "$IP_COUNTRY" ] && echo "📍 Location       : ${IP_CITY:+$IP_CITY, }$IP_COUNTRY"
   echo "🐧 Operating sys  : $OS_PRETTY"
   echo "🔢 OS version     : $OS_VERSION ($OS_ID)"
   echo "🧠 Kernel         : $KERNEL ($ARCH)"
@@ -202,6 +199,7 @@ op_show_system() {
   echo "🌐 Private IP     : ${ip:-unknown}"
   echo "🌍 Public IP      : ${PUBLIC_IP:-unknown}"
   op_check_os
+  return 0
 }
 
 op_thanks() {
@@ -217,4 +215,5 @@ op_thanks() {
   echo
   echo "   📊 Check anytime : sudo op-status"
   echo "   ↩️  Undo anytime  : sudo op-rollback"
+  return 0
 }
