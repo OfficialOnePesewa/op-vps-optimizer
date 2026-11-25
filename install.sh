@@ -35,7 +35,7 @@ fi
 
 echo "[*] Downloading OP VPS Optimizer files..."
 mkdir -p "$LIB_DIR" /usr/local/sbin
-for f in common.sh optimize.sh status.sh rollback.sh bench.sh yt-check.sh watchdog.sh; do
+for f in common.sh optimize.sh status.sh rollback.sh bench.sh yt-check.sh watchdog.sh deeptune.sh; do
   if ! curl -fsSL "$REPO/scripts/$f" -o "$LIB_DIR/$f"; then
     echo "Download failed: scripts/$f"
     exit 1
@@ -44,7 +44,7 @@ done
 chmod 755 "$LIB_DIR"/*.sh
 
 # Command wrappers
-for pair in optimize:op-optimize status:op-status rollback:op-rollback bench:op-bench yt-check:op-ytcheck; do
+for pair in optimize:op-optimize status:op-status rollback:op-rollback bench:op-bench yt-check:op-ytcheck deeptune:op-deeptune; do
   src="${pair%%:*}"
   name="${pair##*:}"
   printf '#!/usr/bin/env bash\nexec %s/%s.sh "$@"\n' "$LIB_DIR" "$src" > "/usr/local/sbin/$name"
@@ -54,4 +54,4 @@ done
 "$LIB_DIR/optimize.sh"
 
 echo
-echo "Installed. Commands: op-status | op-bench | op-ytcheck | op-rollback | op-optimize"
+echo "Installed. Commands: op-status | op-bench | op-ytcheck | op-deeptune | op-rollback | op-optimize"
