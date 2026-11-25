@@ -35,7 +35,7 @@ fi
 
 echo "[*] Downloading OP VPS Optimizer files..."
 mkdir -p "$LIB_DIR" /usr/local/sbin
-for f in common.sh optimize.sh status.sh rollback.sh bench.sh yt-check.sh; do
+for f in common.sh optimize.sh status.sh rollback.sh bench.sh yt-check.sh watchdog.sh; do
   if ! curl -fsSL "$REPO/scripts/$f" -o "$LIB_DIR/$f"; then
     echo "Download failed: scripts/$f"
     exit 1
