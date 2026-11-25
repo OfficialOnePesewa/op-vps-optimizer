@@ -104,6 +104,16 @@ EOF
 echo "[*] Applying settings (no reboot needed)"
 apply_sysctl_file "$OP_SYSCTL_FILE"
 
+# default_qdisc only affects new interfaces. Switch the live default interface now.
+DEV="$(ip -o route show default 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="dev"){print $(i+1); exit}}')"
+if [ -n "$DEV" ] && command -v tc >/dev/null 2>&1; then
+  if tc qdisc replace dev "$DEV" root "$QDISC" 2>/dev/null; then
+    echo "[*] $DEV queue set to $QDISC"
+  else
+    echo "[!] could not change queue on $DEV (a reboot will apply it)"
+  fi
+fi
+
 # Clamp TCP MSS through the tunnel so large packets don't get dropped
 echo "[*] Applying TCP MSS clamp for tunnelled traffic"
 if command -v iptables >/dev/null 2>&1; then
