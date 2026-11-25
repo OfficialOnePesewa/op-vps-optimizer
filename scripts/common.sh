@@ -66,13 +66,13 @@ detect_os() {
 pkg_install() {
   case "$PKG" in
     apt)
-      DEBIAN_FRONTEND=noninteractive apt-get update -qq >/dev/null 2>&1
-      DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "$@" ;;
-    dnf)    dnf install -y -q "$@" ;;
-    yum)    yum install -y -q "$@" ;;
-    pacman) pacman -Sy --noconfirm --needed "$@" ;;
-    apk)    apk add --no-cache "$@" ;;
-    zypper) zypper --non-interactive install "$@" ;;
+      DEBIAN_FRONTEND=noninteractive apt-get update -qq >/dev/null 2>&1 </dev/null
+      DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "$@" </dev/null ;;
+    dnf)    dnf install -y -q "$@" </dev/null ;;
+    yum)    yum install -y -q "$@" </dev/null ;;
+    pacman) pacman -Sy --noconfirm --needed "$@" </dev/null ;;
+    apk)    apk add --no-cache "$@" </dev/null ;;
+    zypper) zypper --non-interactive install "$@" </dev/null ;;
     *)      return 1 ;;
   esac
 }
